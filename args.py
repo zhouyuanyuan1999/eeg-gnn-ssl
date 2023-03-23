@@ -36,6 +36,11 @@ def get_args():
                         default=False,
                         action='store_true',
                         help='Whether to fine-tune pre-trained model.')
+    
+    parser.add_argument('--standardize',
+                        default=False,
+                        action='store_true',
+                        help='Whether to standardize using pre-computed FFT mean & std.')
 
     # Input args
     parser.add_argument(
@@ -126,11 +131,22 @@ def get_args():
         default=False,
         action='store_true',
         help='Whether to use curriculum training for seq-seq model.')
+    # parser.add_argument(
+    #     '--use_fft',
+    #     default=False,
+    #     action='store_true',
+    #     help='Whether the input data is Fourier transformed EEG signal or raw EEG.')
     parser.add_argument(
-        '--use_fft',
-        default=False,
-        action='store_true',
-        help='Whether the input data is Fourier transformed EEG signal or raw EEG.')
+        '--preprocess',
+        default = 'fft',
+        choices=(
+            'raw',
+            'fft', 'gamma_fft', 'alpha_fft', 'delta_fft',
+            'raw_alpha','raw_beta','raw_theta','raw_delta','raw_gamma_1', 'raw_gamma_2'
+            'dwt_db6', 'dwt_sym4'),
+        help="possible preprocessing techniques"
+    )
+    
 
     # Training/test args
     parser.add_argument('--train_batch_size',
@@ -158,7 +174,9 @@ def get_args():
         type=str,
         default='auroc',
         choices=(
-            'F1',
+            'F1_weighted',
+            'F1_macro',
+            'F1_micro',
             'acc',
             'loss',
             'auroc'),
@@ -199,7 +217,7 @@ def get_args():
     if args.metric_name == 'loss':
         # Best checkpoint is the one that minimizes loss
         args.maximize_metric = False
-    elif args.metric_name in ('F1', 'acc', 'auroc'):
+    elif args.metric_name in ('F1_weighted', 'F1_macro', 'F1_micro', 'acc', 'auroc'):
         # Best checkpoint is the one that maximizes F1 or acc
         args.maximize_metric = True
     else:

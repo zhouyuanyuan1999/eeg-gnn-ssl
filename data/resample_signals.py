@@ -1,6 +1,10 @@
 import sys
+import os
+from pathlib import Path
 
-sys.path.append("../")
+directory = Path(__file__).absolute()
+sys.path.append(str(directory.parent.parent))
+
 from constants import INCLUDED_CHANNELS, FREQUENCY
 from data_utils import resampleData, getEDFsignals, getOrderedChannels
 from tqdm import tqdm
@@ -14,16 +18,17 @@ import scipy
 
 def resample_all(raw_edf_dir, save_dir):
     edf_files = []
-    for path, subdirs, files in os.walk(raw_edf_dir):
+    for path, subdirs, files in tqdm(os.walk(raw_edf_dir)):
         for name in files:
             if ".edf" in name:
                 edf_files.append(os.path.join(path, name))
 
     failed_files = []
     for idx in tqdm(range(len(edf_files))):
-        edf_fn = edf_files[idx]
 
+        edf_fn = edf_files[idx]
         save_fn = os.path.join(save_dir, edf_fn.split("/")[-1].split(".edf")[0] + ".h5")
+        
         if os.path.exists(save_fn):
             continue
         try:
@@ -43,8 +48,8 @@ def resample_all(raw_edf_dir, save_dir):
                 )
 
             with h5py.File(save_fn, "w") as hf:
-                hf.create_dataset("resampled_signal", data=signal_array)
-            hf.create_dataset("resample_freq", data=FREQUENCY)
+              hf.create_dataset("resampled_signal", data=signal_array)
+              hf.create_dataset("resample_freq", data=FREQUENCY)
 
         except BaseException:
             failed_files.append(edf_fn)

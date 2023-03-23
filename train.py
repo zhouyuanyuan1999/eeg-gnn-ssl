@@ -79,7 +79,7 @@ def main(args):
                 test_batch_size=args.test_batch_size,
                 time_step_size=args.time_step_size,
                 max_seq_len=args.max_seq_len,
-                standardize=True,
+                standardize=args.standardize,
                 num_workers=args.num_workers,
                 padding_val=0.,
                 augmentation=args.data_augment,
@@ -87,7 +87,7 @@ def main(args):
                 graph_type=args.graph_type,
                 top_k=args.top_k,
                 filter_type=args.filter_type,
-                use_fft=args.use_fft,
+                preprocess=args.preprocess,
                 preproc_dir=args.preproc_dir)
         else:
             print("Using densecnn dataloader!")
@@ -415,12 +415,14 @@ def evaluate(
                                         y=y_true_all,
                                         y_prob=y_prob_all,
                                         file_names=file_name_all,
-                                        average="binary" if args.task == "detection" else "weighted")
+                                        average="binary" if args.task == "detection" else args.metric_avg)
 
     eval_loss = nll_meter.avg if (nll_meter is not None) else loss.item()
     results_list = [('loss', eval_loss),
                     ('acc', scores_dict['acc']),
-                    ('F1', scores_dict['F1']),
+                    ('F1_weighted', scores_dict['F1_weighted']),
+                    ('F1_macro', scores_dict['F1_macro']),
+                    ('F1_micro', scores_dict['F1_micro']),
                     ('recall', scores_dict['recall']),
                     ('precision', scores_dict['precision']),
                     ('best_thresh', best_thresh)]

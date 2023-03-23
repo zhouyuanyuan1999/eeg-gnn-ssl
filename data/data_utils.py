@@ -7,8 +7,8 @@ sys.path.append("../")
 import pyedflib
 from constants import INCLUDED_CHANNELS, FREQUENCY, ALL_LABEL_DICT
 from scipy.fftpack import fft
-from scipy.signal import resample, correlate
-
+from scipy.signal import resample, correlate, butter, filtfilt
+import pywt
 
 def computeFFT(signals, n):
     """
@@ -33,6 +33,98 @@ def computeFFT(signals, n):
 
     return FT, P
 
+def compute_fft(signals, n):
+    """
+    Args:
+        signals: EEG signals, (number of channels, number of data points)
+        n: length of positive frequency terms of fourier transform
+    Returns:
+        FT: log amplitude of FFT of signals, (number of channels, number of data points)
+        P: phase spectrum of FFT of signals, (number of channels, number of data points)
+    """
+    # fourier transform
+    fourier_signal = fft(signals, n=n, axis=-1)  # FFT on the last dimension
+
+    # only take the positive freq part
+    idx_pos = int(np.floor(n / 2))
+    fourier_signal = fourier_signal[:, :idx_pos]
+    amp = np.abs(fourier_signal)
+    amp[amp == 0.0] = 1e-8  # avoid log of 0
+
+    FT = np.log(amp)
+
+    return FT
+
+
+def compute_raw(signals, n):
+    return signals
+
+def butter_bandpass(lowcut, highcut, order=5):
+    return butter(order, [lowcut, highcut], fs = FREQUENCY, btype='band')
+
+def butter_bandpass_filter(data, lowcut, highcut, order=4):
+    b, a = butter_bandpass(lowcut, highcut, order=order)
+    y = filtfilt(b, a, data)
+    return y
+
+def compute_raw_alpha(signals, n):
+    d = butter_bandpass_filter(signals, 8, 12, order=4)
+    return d
+
+def compute_raw_beta(signals, n):
+    d = butter_bandpass_filter(signals, 12, 30, order=4)
+    return d
+
+def compute_raw_theta(signals, n):
+    d = butter_bandpass_filter(signals, 4, 8, order=4)
+    return d
+
+def compute_raw_delta(signals, n):
+    d = butter_bandpass_filter(signals, 0.5, 4, order=4)
+    return d
+
+def compute_raw_gamma_1(signals, n):
+    d = butter_bandpass_filter(signals, 30, 60, order=4)
+    return d
+
+def compute_raw_gamma_2(signals, n):
+    d = butter_bandpass_filter(signals, 30, 95, order=4)
+    return d
+
+def compute_gamma_fft(signals, n):
+    d = butter_bandpass_filter(signals, 30, 60, order=4)
+    d = compute_fft(d, n=n)
+    return d
+
+def compute_alpha_fft(signals, n):
+    d = butter_bandpass_filter(signals, 8, 12, order=4)
+    d = compute_fft(d, n=n)
+    return d
+
+def compute_delta_fft(signals, n):
+    d = butter_bandpass_filter(signals, 0.5, 4, order=4)
+    d = compute_fft(d, n=n)
+    return d
+
+def compute_dwt_db6(signals, n):
+    d = []
+    for i in range(signals.shape[0]):
+        coeffs = pywt.wavedec(signals[i], 'db6', mode='sym', level=4)
+        coeffs = np.hstack(coeffs)
+        d.append(coeffs)       
+        
+    d = np.vstack(d)
+    return d
+    
+def compute_dwt_sym4(signals, n):
+    d = []
+    for i in range(signals.shape[0]):
+        coeffs = pywt.wavedec(signals[i], 'sym4', mode='sym', level=4)
+        coeffs = np.hstack(coeffs)
+        d.append(coeffs)       
+        
+    d = np.vstack(d)
+    return d
 
 def get_swap_pairs(channels):
     """

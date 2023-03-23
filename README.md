@@ -1,3 +1,8 @@
+## Modification
+Mainly added different preprocessing methods, such as fft, dwt, and bandpass. Use run.ipynb to train models. Use preprocess_vis.ipynb to visualize different preprocessings. 
+
+### The following is the original README:
+
 # Self-Supervised Graph Neural Networks for Improved Electroencephalographic Seizure Analysis
 
 Siyi Tang, Jared A. Dunnmon, Khaled Saab, Xuan Zhang, Qianying Huang, Florian Dubost, Daniel L. Rubin, Christopher Lee-Messer. *International Conference on Learning Representations, 2022*. https://openreview.net/pdf?id=k9bx1EfHI_-

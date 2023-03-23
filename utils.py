@@ -306,8 +306,12 @@ def eval_dict(y_pred, y, y_prob=None, file_names=None, average='macro'):
             true_dict[f_name] = y[idx]
 
     if y is not None:
-        scores_dict['acc'] = accuracy_score(y_true=y, y_pred=y_pred)
-        scores_dict['F1'] = f1_score(y_true=y, y_pred=y_pred, average=average)
+        scores_dict['acc'] = accuracy_score(y_true=y, y_pred=y_pred)      
+        
+        scores_dict['F1_weighted'] = f1_score(y_true=y, y_pred=y_pred, average='weighted')
+        scores_dict['F1_macro'] = f1_score(y_true=y, y_pred=y_pred, average='macro')
+        scores_dict['F1_micro'] = f1_score(y_true=y, y_pred=y_pred, average='micro')
+        
         scores_dict['precision'] = precision_score(
             y_true=y, y_pred=y_pred, average=average)
         scores_dict['recall'] = recall_score(

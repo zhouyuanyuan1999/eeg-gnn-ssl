@@ -15,6 +15,7 @@ from constants import INCLUDED_CHANNELS, FREQUENCY
 from data.data_utils import *
 import utils
 import pyedflib
+import data.data_utils
 
 repo_paths = str(Path.cwd()).split('eeg-gnn-ssl')
 repo_paths = Path(repo_paths[0]).joinpath('eeg-gnn-ssl')
@@ -28,7 +29,7 @@ def computeSliceMatrix(
         seizure_idx,
         time_step_size=1,
         clip_len=60,
-        is_fft=False):
+        preprocess='fft'):
     """
     Comvert entire EEG sequence into clips of length clip_len
     Args:
@@ -41,6 +42,7 @@ def computeSliceMatrix(
     Returns:
         eeg_clip: eeg clip (clip_len, num_channels, time_step_size*freq)
     """
+    
     offset = 2 # hard-coded offset
 
     with h5py.File(h5_fn, 'r') as f:
@@ -73,9 +75,10 @@ def computeSliceMatrix(
         end_time_step = start_time_step + physical_time_step_size
         # (num_channels, physical_time_step_size)
         curr_time_step = signal_array[:, start_time_step:end_time_step]
-        if is_fft:
-            curr_time_step, _ = computeFFT(
-                curr_time_step, n=physical_time_step_size)
+        
+        preproc_ = getattr(data.data_utils, f'compute_{preprocess}')
+        curr_time_step = preproc_(
+            curr_time_step, n=physical_time_step_size)
 
         time_steps.append(curr_time_step)
         start_time_step = end_time_step
@@ -101,7 +104,7 @@ class SeizureDataset(Dataset):
             graph_type=None,
             top_k=None,
             filter_type='laplacian',
-            use_fft=False,
+            preprocess='fft',
             preproc_dir=None):
         """
         Args:
@@ -139,7 +142,7 @@ class SeizureDataset(Dataset):
         self.graph_type = graph_type
         self.top_k = top_k
         self.filter_type = filter_type
-        self.use_fft = use_fft
+        self.preprocess = preprocess
         self.preproc_dir = preproc_dir
 
         # get full paths to all raw edf files
@@ -187,7 +190,7 @@ class SeizureDataset(Dataset):
         Scale EEG signals by a random value between 0.8 and 1.2
         """
         scale_factor = np.random.uniform(0.8, 1.2)
-        if self.use_fft:
+        if self.preprocess == 'fft':
             EEG_seq += np.log(scale_factor)
         else:
             EEG_seq *= scale_factor
@@ -310,10 +313,12 @@ class SeizureDataset(Dataset):
         if self.preproc_dir is None:
             resample_sig_dir = os.path.join(
                 self.input_dir, edf_fn.split('.edf')[0] + '.h5')
+
             eeg_clip = computeSliceMatrix(
                 h5_fn=resample_sig_dir, edf_fn=edf_file, seizure_idx=seizure_idx,
                 time_step_size=self.time_step_size, clip_len=self.max_seq_len,
-                is_fft=self.use_fft)
+                preprocess=self.preprocess)
+            
         else:
             with h5py.File(os.path.join(self.preproc_dir, edf_fn + '_' + str(seizure_idx) + '.h5'), 'r') as hf:
                 eeg_clip = hf['clip'][()]
@@ -384,7 +389,7 @@ def load_dataset_classification(
         graph_type='combined',
         top_k=None,
         filter_type='laplacian',
-        use_fft=False,
+        preprocess='fft',
         preproc_dir=None):
     """
     Args:
@@ -427,7 +432,7 @@ def load_dataset_classification(
         scaler = StandardScaler(mean=means, std=stds)
     else:
         scaler = None
-
+        
     dataloaders = {}
     datasets = {}
     for split in ['train', 'dev', 'test']:
@@ -449,7 +454,7 @@ def load_dataset_classification(
                                  graph_type=graph_type,
                                  top_k=top_k,
                                  filter_type=filter_type,
-                                 use_fft=use_fft,
+                                 preprocess=preprocess,
                                  preproc_dir=preproc_dir)
 
         if split == 'train':
